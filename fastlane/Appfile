@@ -1,0 +1,4 @@
+for_platform :ios do
+  app_identifier "com.timewarden.app"
+  team_id ENV["APPLE_TEAM_ID"]
+end

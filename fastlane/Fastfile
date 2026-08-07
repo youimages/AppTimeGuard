@@ -1,0 +1,118 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build a signed, device-installable IPA using App Store Connect API key"
+  lane :build do
+    team_id     = ENV["APPLE_TEAM_ID"]
+    bundle_id   = ENV["BUNDLE_ID"] || "com.timewarden.app"
+    ext_id      = "#{bundle_id}.deviceactivitymonitor"
+    key_id      = ENV["ASC_KEY_ID"]
+    issuer_id   = ENV["ASC_ISSUER_ID"]
+    key_content = ENV["ASC_KEY_CONTENT"]
+
+    UI.user_error!("缺少密钥：请在仓库 Settings > Secrets and variables > Actions 中配置 APPLE_TEAM_ID、ASC_KEY_ID、ASC_ISSUER_ID、ASC_KEY_CONTENT") \
+      unless team_id && key_id && issuer_id && key_content
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_content: key_content,
+      is_key_content_base64: false
+    )
+
+    # 1. 确保主 App 与扩展的 App ID 都存在
+    [bundle_id, ext_id].each do |bid|
+      produce(
+        app_identifier: bid,
+        app_name: bid == bundle_id ? "AppTimeGuard" : "DeviceActivityMonitor",
+        skip_itc: true,
+        team_id: team_id
+      )
+    end
+
+    # 2. 在 App ID 上开启 Family Controls 与 App Groups 能力
+    enable_capability(bundle_id, "FAMILY_CONTROLS", api_key)
+    enable_capability(bundle_id, "APP_GROUPS", api_key)
+    enable_capability(ext_id, "FAMILY_CONTROLS", api_key)
+    enable_capability(ext_id, "APP_GROUPS", api_key)
+
+    # 能力开启后需要一点时间同步
+    sleep(12)
+
+    # 3. 注册测试设备（提供 DEVICE_UDID 后可装到该手机）
+    if ENV["DEVICE_UDID"] && !ENV["DEVICE_UDID"].empty?
+      register_devices(devices: { "UserDevice" => ENV["DEVICE_UDID"] })
+    end
+
+    # 4. 创建开发证书 + 描述文件（development）
+    get_certificates(
+      development: true,
+      team_id: team_id,
+      api_key: api_key
+    )
+    sigh(
+      app_identifier: bundle_id,
+      development: true,
+      team_id: team_id,
+      api_key: api_key,
+      force: true
+    )
+    sigh(
+      app_identifier: ext_id,
+      development: true,
+      team_id: team_id,
+      api_key: api_key,
+      force: true
+    )
+
+    # 5. 编译并导出签名 IPA
+    gym(
+      project: "AppTimeGuardiOS/AppTimeGuard.xcodeproj",
+      scheme: "AppTimeGuard",
+      configuration: "Release",
+      export_method: "development",
+      output_directory: "build/ipa",
+      output_name: "AppTimeGuard.ipa",
+      clean: true,
+      xcargs: "CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=#{team_id}"
+    )
+  end
+
+  # 通过 App Store Connect API 给 App ID 开启某个能力
+  def enable_capability(bundle_id, capability_type, api_key)
+    token = api_key.token
+    res = sh("curl -s -H 'Authorization: Bearer #{token}' 'https://api.appstoreconnect.apple.com/v1/appIds?filter[identifier]=#{bundle_id}'")
+    data = JSON.parse(res)
+    if data["data"].nil? || data["data"].empty?
+      UI.message("找不到 App ID #{bundle_id}，跳过能力开启")
+      return
+    end
+    app_id = data["data"].first["id"]
+
+    if capability_type == "APP_GROUPS"
+      body = {
+        data: {
+          type: "appIdCapabilities",
+          attributes: {
+            capabilityType: "APP_GROUPS",
+            settings: [
+              { key: "com.apple.security.application-groups", value: ["group.com.timewarden.app"] }
+            ]
+          }
+        }
+      }.to_json
+    else
+      body = {
+        data: {
+          type: "appIdCapabilities",
+          attributes: { capabilityType: capability_type }
+        }
+      }.to_json
+    end
+
+    out = sh("curl -s -X POST https://api.appstoreconnect.apple.com/v1/appIds/#{app_id}/capabilities -H 'Authorization: Bearer #{token}' -H 'Content-Type: application/json' -d '#{body}'")
+    UI.message("已对 #{bundle_id} 开启 #{capability_type}: #{out[0, 160]}")
+  rescue => e
+    UI.message("enable_capability(#{capability_type}) 跳过: #{e}")
+  end
+end
