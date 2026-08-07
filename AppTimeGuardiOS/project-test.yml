@@ -5,7 +5,7 @@ name: AppTimeGuardTest
 options:
   bundleIdPrefix: com.timewarden
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "16.0"
 targets:
   AppTimeGuardTest:
     type: application
@@ -23,4 +23,4 @@ targets:
         INFOPLIST_FILE: AppTimeGuard/Info.plist
         CODE_SIGN_ENTITLEMENTS: AppTimeGuard/AppTimeGuard-test.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
-        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"

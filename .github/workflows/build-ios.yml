@@ -40,7 +40,7 @@ jobs:
           options:
             bundleIdPrefix: com.timewarden
             deploymentTarget:
-              iOS: "15.0"
+              iOS: "16.0"
           targets:
             AppTimeGuard:
               type: application
@@ -59,7 +59,7 @@ jobs:
                   INFOPLIST_FILE: AppTimeGuard/Info.plist
                   CODE_SIGN_ENTITLEMENTS: AppTimeGuard/AppTimeGuard.entitlements
                   TARGETED_DEVICE_FAMILY: "1,2"
-                  IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+                  IPHONEOS_DEPLOYMENT_TARGET: "16.0"
             DeviceActivityMonitorExtension:
               type: app-extension
               platform: iOS
@@ -72,12 +72,13 @@ jobs:
                   INFOPLIST_FILE: DeviceActivityMonitor/Info.plist
                   CODE_SIGN_ENTITLEMENTS: DeviceActivityMonitor/DeviceActivityMonitorExtension.entitlements
                   TARGETED_DEVICE_FAMILY: "1,2"
-                  IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+                  IPHONEOS_DEPLOYMENT_TARGET: "16.0"
           YAML
           xcodegen generate
 
       - name: Validate project compiles (unsigned, simulator)
         run: |
+          set -o pipefail
           cd AppTimeGuardiOS
           xcodebuild \
             -project AppTimeGuard.xcodeproj \
@@ -141,6 +142,7 @@ jobs:
 
       - name: Build test .app (unsigned)
         run: |
+          set -o pipefail
           cd AppTimeGuardiOS
           xcodebuild \
             -project AppTimeGuardTest.xcodeproj \

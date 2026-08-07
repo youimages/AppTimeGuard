@@ -101,7 +101,7 @@ final class MonitorManager: ObservableObject {
         ]
 
         do {
-            try center.startMonitoring(schedule, events: events)
+            try center.startMonitoring(DeviceActivityName("dailyLimit"), during: schedule, events: events)
             isMonitoring = true
         } catch {
             isMonitoring = false
