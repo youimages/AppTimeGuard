@@ -13,6 +13,24 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: - 测试模式提示（免费账号 / 未授权时显示）
+                if !manager.isFamilyControlsAvailable {
+                    Section {
+                        Label {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("测试模式")
+                                    .font(.headline)
+                                Text("当前账号未启用 FamilyControls 能力（需付费开发者账号），应用选择、限额设置可正常体验，但“实际屏蔽其他 App”不生效。")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+
                 // MARK: - 监控开关
                 Section {
                     Toggle("启用监控", isOn: $manager.isMonitoring)

@@ -112,3 +112,60 @@ jobs:
             ~/Library/Logs/gym/
             /Users/runner/Library/Logs/gym/
           if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # 测试版：免费账号 / 开发者模式可安装
+  # 不含 DeviceActivityMonitor 扩展、不含 FamilyControls 能力，
+  # 产出未签名 .app，用户用免费 Apple ID（Sideloadly / Xcode）重签即可装到手机。
+  # ---------------------------------------------------------------------------
+  build-test:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $LATEST"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate TEST Xcode project (no extension, no FamilyControls)
+        run: |
+          cd AppTimeGuardiOS
+          xcodegen generate --spec project-test.yml --project AppTimeGuardTest.xcodeproj
+
+      - name: Build test .app (unsigned)
+        run: |
+          cd AppTimeGuardiOS
+          xcodebuild \
+            -project AppTimeGuardTest.xcodeproj \
+            -scheme AppTimeGuardTest \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-test \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tail -30
+
+      - name: Package unsigned .app into zip for sideloading
+        run: |
+          cd AppTimeGuardiOS
+          APP=$(find build-test -name "AppTimeGuardTest.app" -type d | head -1)
+          echo "Found app: $APP"
+          ditto -c -k --keepParent "$APP" AppTimeGuardTest-unsigned.zip
+          ls -lh AppTimeGuardTest-unsigned.zip
+
+      - name: Upload unsigned test .app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppTimeGuard-test-app-unsigned
+          path: AppTimeGuardiOS/AppTimeGuardTest-unsigned.zip
+          if-no-files-found: warn
+

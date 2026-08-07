@@ -1,0 +1,22 @@
+# 测试版工程配置（免费账号 / 开发者模式可安装）
+# 与正式版区别：不含 DeviceActivityMonitor 扩展、不含 FamilyControls 能力，
+# 因此可用免费 Apple ID 签名安装；UI / 选 App / 限额设置均可体验，屏蔽功能降级提示。
+name: AppTimeGuardTest
+options:
+  bundleIdPrefix: com.timewarden
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  AppTimeGuardTest:
+    type: application
+    platform: iOS
+    sources:
+      - path: AppTimeGuard
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.timewarden.app
+        INFOPLIST_FILE: AppTimeGuard/Info.plist
+        CODE_SIGN_ENTITLEMENTS: AppTimeGuard/AppTimeGuard-test.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
