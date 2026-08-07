@@ -13,6 +13,10 @@ targets:
     sources:
       - path: AppTimeGuard
       - path: Shared
+    dependencies:
+      - sdk: FamilyControls.framework
+      - sdk: ManagedSettings.framework
+      - sdk: DeviceActivity.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.timewarden.app
