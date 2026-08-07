@@ -171,3 +171,34 @@ AppTimeGuardiOS/
 ## 四、免责声明
 
 本应用用于**自我时间管理**。Android 版需用户主动授权，iOS 版基于官方 Screen Time API，均符合各平台安全规范。请勿用于强制监控他人设备。
+
+---
+
+## 五、下载与安装（GitHub Actions 自动构建）
+
+仓库已配置 CI（`.github/workflows/build-ios.yml`），每次 push 到 `main` 自动构建 iOS 产物。
+
+### 5.1 iOS 免费测试版（未签名 .ipa，推荐先装这个）
+
+> 测试版**不含**屏幕使用时间锁定能力（FamilyControls 需付费开发者账号），仅用于验证 UI / 流程。
+
+- 下载：`AppTimeGuardTest.ipa`
+  https://github.com/youimages/AppTimeGuard/releases/download/test-build-1/AppTimeGuardTest.ipa
+- 免费安装步骤（无需付费开发者账号，用免费 Apple ID 自签）：
+  1. 电脑安装 [Sideloadly](https://sideloadly.io/)（Windows / macOS 均可）
+  2. iPhone 用 USB 连接电脑，打开 Sideloadly，载入 `.ipa`，填写你的免费 Apple ID，点 **Start**
+  3. iPhone 开启**开发者模式**：`设置 → 隐私与安全性 → 开发者模式 → 开启` 并重启
+  4. **信任开发者**：`设置 → 通用 → VPN 与设备管理 → 信任你的 Apple ID`
+  5. 打开 App 即可
+  - 免费签名有效期 **7 天**，到期需在 Sideloadly 重新签名一次。
+
+### 5.2 iOS 完整签名版（含锁定能力，需付费账号）
+
+1. 在仓库 `Settings → Secrets and variables → Actions` 配置以下 5~6 个密钥（需付费 Apple Developer 账号 $99/年）：
+   - `APPLE_TEAM_ID`、`BUNDLE_ID`、`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_KEY_CONTENT`、`DEVICE_UDID`
+2. 配置完成后，重新运行 workflow（或再次 push），CI 会用 fastlane 自动签名并产出可直接安装到手机的 IPA。
+
+### 5.3 Android
+
+- 见上方「一、Android 版」编译步骤：用 Android Studio 打开 `AppTimeGuard/` 目录编译安装；
+- 或下载 CI 已编译产物（APK）。
