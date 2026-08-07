@@ -12,11 +12,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || true
-
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Select Xcode (use latest installed)
+        run: |
+          ls /Applications/ | grep Xcode
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $LATEST"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+          xcodebuild -version
 
       - name: Install xcodegen
         run: brew install xcodegen
