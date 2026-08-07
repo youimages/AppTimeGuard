@@ -40,9 +40,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     // MARK: - 每日间隔开始：解除屏蔽
 
     override func intervalDidStart(
-        _ activity: DeviceActivityName
+        for activity: DeviceActivityName
     ) {
-        super.intervalDidStart(activity)
+        super.intervalDidStart(for: activity)
         // 新的一天开始，清除昨日屏蔽
         store.clearAllSettings()
     }
@@ -50,9 +50,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     // MARK: - 监控结束
 
     override func intervalDidEnd(
-        _ activity: DeviceActivityName
+        for activity: DeviceActivityName
     ) {
-        super.intervalDidEnd(activity)
+        super.intervalDidEnd(for: activity)
         // 监控周期结束，清除屏蔽
         store.clearAllSettings()
     }

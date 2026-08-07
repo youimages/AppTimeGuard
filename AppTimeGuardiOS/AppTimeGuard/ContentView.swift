@@ -34,7 +34,7 @@ struct ContentView: View {
                 // MARK: - 监控开关
                 Section {
                     Toggle("启用监控", isOn: $manager.isMonitoring)
-                        .onChange(of: manager.isMonitoring) { _, enabled in
+                        .onChange(of: manager.isMonitoring) { enabled in
                             if enabled {
                                 manager.startMonitoring()
                             } else {
@@ -73,7 +73,7 @@ struct ContentView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .onChange(of: manager.limitMinutes) { _, _ in
+                    .onChange(of: manager.limitMinutes) { _ in
                         // 修改阈值后若正在监控，重启以应用新阈值
                         if manager.isMonitoring {
                             manager.startMonitoring()
