@@ -137,7 +137,7 @@ jobs:
       - name: Generate TEST Xcode project (no extension, no FamilyControls)
         run: |
           cd AppTimeGuardiOS
-          xcodegen generate --spec project-test.yml --project AppTimeGuardTest.xcodeproj
+          xcodegen generate --spec project-test.yml
 
       - name: Build test .app (unsigned)
         run: |
