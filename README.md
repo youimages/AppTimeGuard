@@ -184,13 +184,14 @@ AppTimeGuardiOS/
 
 - 下载：`AppTimeGuardTest.ipa`
   https://github.com/youimages/AppTimeGuard/releases/download/test-build-1/AppTimeGuardTest.ipa
+- 已修复 `Info.plist` 缺失 `CFBundleExecutable` 的问题，支持 Sideloadly、轻松签、全能签等自签工具导入。
 - 免费安装步骤（无需付费开发者账号，用免费 Apple ID 自签）：
-  1. 电脑安装 [Sideloadly](https://sideloadly.io/)（Windows / macOS 均可）
-  2. iPhone 用 USB 连接电脑，打开 Sideloadly，载入 `.ipa`，填写你的免费 Apple ID，点 **Start**
+  1. 电脑安装 [Sideloadly](https://sideloadly.io/)（Windows / macOS 均可），或在 iPhone 上安装轻松签 / 全能签等自签工具
+  2. 用免费 Apple ID 对 `.ipa` 进行签名并安装到 iPhone
   3. iPhone 开启**开发者模式**：`设置 → 隐私与安全性 → 开发者模式 → 开启` 并重启
   4. **信任开发者**：`设置 → 通用 → VPN 与设备管理 → 信任你的 Apple ID`
   5. 打开 App 即可
-  - 免费签名有效期 **7 天**，到期需在 Sideloadly 重新签名一次。
+  - 免费签名有效期 **7 天**，到期需重新签名一次。
 
 ### 5.2 iOS 完整签名版（含锁定能力，需付费账号）
 
