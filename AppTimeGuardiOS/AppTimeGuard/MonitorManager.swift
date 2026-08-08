@@ -11,6 +11,7 @@ import Foundation
 import FamilyControls
 import ManagedSettings
 import DeviceActivity
+import UserNotifications
 
 @MainActor
 final class MonitorManager: ObservableObject {
@@ -138,5 +139,69 @@ final class MonitorManager: ObservableObject {
     func clearShield() {
         guard isFamilyControlsAvailable else { return }
         store.clearAllSettings()
+    }
+
+    // MARK: - 软守护（免费账号也可用：本地通知 + 倒计时，不真正拦截其他 App）
+
+    /// 软守护剩余秒数（前台倒计时展示）
+    @Published var remainingSeconds: Int = 0
+
+    private var countdownTimer: Timer?
+
+    /// 请求本地通知授权
+    func requestNotificationAuth() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            print("通知授权 granted: \(granted)")
+        }
+    }
+
+    /// 安排 N 分钟后的本地通知（即使 App 被杀死也能提醒）
+    func scheduleSoftNotification(minutes: Int) {
+        let center = UNUserNotificationCenter.current()
+        center.removeAllPendingNotificationRequests()
+        let content = UNMutableNotificationContent()
+        content.title = "时长守护提醒"
+        content.body = "你设置的守护时间已到，请放下手机休息一下。"
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(max(1, minutes * 60)), repeats: false)
+        let request = UNNotificationRequest(identifier: "softGuard", content: content, trigger: trigger)
+        center.add(request)
+    }
+
+    /// 取消已安排的本地通知
+    func cancelSoftNotification() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    }
+
+    /// 启动前台倒计时（仅用于界面展示，真正提醒靠本地通知）
+    func startCountdown(seconds: Int) {
+        remainingSeconds = seconds
+        countdownTimer?.invalidate()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
+            guard let self else { return }
+            if self.remainingSeconds > 0 {
+                self.remainingSeconds -= 1
+            } else {
+                t.invalidate()
+            }
+        }
+    }
+
+    /// 停止倒计时
+    func stopCountdown() {
+        countdownTimer?.invalidate()
+        remainingSeconds = 0
+    }
+
+    /// 软守护：开始（通知 + 倒计时）
+    func startSoftGuard() {
+        scheduleSoftNotification(minutes: limitMinutes)
+        startCountdown(seconds: limitMinutes * 60)
+    }
+
+    /// 软守护：停止
+    func stopSoftGuard() {
+        cancelSoftNotification()
+        stopCountdown()
     }
 }

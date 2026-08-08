@@ -4,63 +4,87 @@
 //
 
 import SwiftUI
-import FamilyControls
+import UIKit
 
 struct ContentView: View {
     @StateObject private var manager = MonitorManager.shared
-    @State private var showPicker = false
+
+    // 软守护：自定义应用选择（免费账号无法读取系统已装 App，只能手动勾选常用 App 作为提醒对象）
+    @State private var selectedApps: [String] = ["微信", "抖音"]
+    @State private var customAppName: String = ""
+    @State private var showAddSheet = false
+
+    let presetApps = [
+        "微信", "抖音", "微博", "小红书", "B站", "快手",
+        "淘宝", "王者荣耀", "和平精英", "原神", "QQ", "支付宝"
+    ]
 
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: - 测试模式提示（免费账号 / 未授权时显示）
-                if !manager.isFamilyControlsAvailable {
-                    Section {
-                        Label {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("测试模式")
-                                    .font(.headline)
-                                Text("当前账号未启用 FamilyControls 能力（需付费开发者账号），应用选择、限额设置可正常体验，但“实际屏蔽其他 App”不生效。")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
+                // MARK: - 软守护模式说明
+                Section {
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("软守护模式（免费账号可用）")
+                                .font(.headline)
+                            Text("iOS 第三方 App 无法真正拦截其他 App（需付费开发者账号的屏幕使用时间能力）。本模式通过「本地通知定时提醒 + 全屏遮挡」帮助你自律，并可一键跳转系统设置开启真正的 App 限额。")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
+                    } icon: {
+                        Image(systemName: "bell.fill")
+                            .foregroundStyle(.blue)
                     }
                 }
 
-                // MARK: - 监控开关
+                // MARK: - 守护开关
                 Section {
-                    Toggle("启用监控", isOn: $manager.isMonitoring)
+                    Toggle("开始守护", isOn: $manager.isMonitoring)
                         .onChange(of: manager.isMonitoring) { enabled in
                             if enabled {
-                                manager.startMonitoring()
+                                manager.startSoftGuard()
                             } else {
-                                manager.stopMonitoring()
+                                manager.stopSoftGuard()
                             }
                         }
+                    if manager.isMonitoring {
+                        HStack {
+                            Text("剩余时间")
+                            Spacer()
+                            Text(format(manager.remainingSeconds))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
                 } header: {
-                    Text("监控")
+                    Text("守护")
                 } footer: {
-                    Text("开启后，选中的应用达到每日上限将自动锁定，次日 0 点重置。")
+                    Text("开启后，到点会弹出本地通知提醒；若 App 在前台则显示全屏遮挡。真正锁死其他 App 请在下方跳转系统设置。")
                 }
 
                 // MARK: - 应用选择
                 Section {
-                    Button {
-                        showPicker = true
-                    } label: {
+                    ForEach(selectedApps, id: \.self) { app in
                         HStack {
-                            Text("选择要限制的应用")
+                            Text(app)
                             Spacer()
-                            Text("\(manager.selection.applicationTokens.count) 个")
-                                .foregroundStyle(.secondary)
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.blue)
                         }
                     }
+                    .onDelete { indexSet in
+                        selectedApps.remove(atOffsets: indexSet)
+                    }
+                    Button {
+                        showAddSheet = true
+                    } label: {
+                        Label("添加应用", systemImage: "plus.circle")
+                    }
                 } header: {
-                    Text("受监控应用")
+                    Text("要守护的应用（提醒用，不真正拦截）")
+                } footer: {
+                    Text("免费账号下无法读取设备已装 App，请手动勾选常用 App 作为提醒对象。")
                 }
 
                 // MARK: - 时间限额
@@ -74,34 +98,122 @@ struct ContentView: View {
                         }
                     }
                     .onChange(of: manager.limitMinutes) { _ in
-                        // 修改阈值后若正在监控，重启以应用新阈值
                         if manager.isMonitoring {
-                            manager.startMonitoring()
+                            manager.startSoftGuard()
                         }
                     }
                 } header: {
                     Text("时间限额")
                 }
 
-                // MARK: - 手动测试屏蔽
+                // MARK: - 真正锁定（系统能力）
                 Section {
-                    Button("立即测试屏蔽效果") {
-                        manager.shieldApplications()
+                    Button {
+                        openScreenTimeSettings()
+                    } label: {
+                        Label("去系统设置开启真正的 App 限额", systemImage: "lock.shield")
                     }
-                    Button("取消屏蔽") {
-                        manager.clearShield()
-                    }
+                    Text("iOS「屏幕使用时间 → App 限额」可真正锁死指定 App，免费且无需开发者账号。点击上方按钮跳转设置，按提示操作即可。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 } header: {
-                    Text("调试")
-                } footer: {
-                    Text("可手动触发屏蔽，预览被锁定时的界面效果。")
+                    Text("真正锁定（系统能力）")
                 }
             }
             .navigationTitle("时长守护")
-            .familyActivityPicker(
-                isPresented: $showPicker,
-                selection: $manager.selection
-            )
+            .onAppear {
+                manager.requestNotificationAuth()
+            }
+            .sheet(isPresented: $showAddSheet) {
+                NavigationStack {
+                    List {
+                        ForEach(presetApps.filter { !selectedApps.contains($0) }, id: \.self) { app in
+                            Button {
+                                selectedApps.append(app)
+                                showAddSheet = false
+                            } label: {
+                                Text(app)
+                            }
+                        }
+                        Section("自定义") {
+                            TextField("输入应用名称", text: $customAppName)
+                            Button("添加") {
+                                let name = customAppName.trimmingCharacters(in: .whitespaces)
+                                if !name.isEmpty && !selectedApps.contains(name) {
+                                    selectedApps.append(name)
+                                }
+                                customAppName = ""
+                                showAddSheet = false
+                            }
+                        }
+                    }
+                    .navigationTitle("选择应用")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("取消") { showAddSheet = false }
+                        }
+                    }
+                }
+            }
+            // 全屏遮挡：到点且 App 在前台时显示
+            .overlay {
+                if manager.isMonitoring && manager.remainingSeconds <= 0 {
+                    LockOverlay(onDismiss: {
+                        manager.isMonitoring = false
+                        manager.stopSoftGuard()
+                    })
+                }
+            }
+        }
+    }
+
+    private func format(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d", m, s)
+    }
+
+    private func openScreenTimeSettings() {
+        // 优先尝试直达屏幕使用时间的私有 scheme，失败则回退到设置根页面
+        if let url = URL(string: "prefs:root=SCREEN_TIME") ?? URL(string: UIApplication.openSettingsURLString),
+           UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
+}
+
+/// 全屏遮挡（软守护到点后的提醒界面）
+struct LockOverlay: View {
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.red.ignoresSafeArea()
+            VStack(spacing: 20) {
+                Image(systemName: "hand.raised.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.white)
+                Text("时间到")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                Text("你设置的守护时间已结束，请放下手机休息一下。")
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                Button {
+                    onDismiss()
+                } label: {
+                    Text("我知道了")
+                        .font(.headline)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 12)
+                        .background(.white, in: Capsule())
+                }
+                .padding(.top, 12)
+            }
         }
     }
 }
